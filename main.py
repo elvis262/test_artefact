@@ -67,7 +67,7 @@ class DataInjection:
 
     def load_data_to_postgres(self, df: pd.DataFrame):
         try:
-            df = df.where(pd.notnull(df), None)
+            df = df.astype(object).where(pd.notnull(df), None)
             with psycopg.connect(self.database_url) as conn:
                 with conn.cursor() as cur:
                     
@@ -112,6 +112,7 @@ class DataInjection:
                             inserted_count += 1
                         except psycopg.Error as e:
                             logger.error("Erreur PostgreSQL lors de l'insertion d'une ligne: %s", e)
+                            conn.rollback()
                             continue
                         
                 conn.commit()

@@ -2,6 +2,8 @@
 
 Pipeline ETL qui extrait des donnees de vente depuis MinIO (stockage S3), les normalise et les charge dans PostgreSQL, orchestrable via Airflow ou en standalone.
 
+**Repo GitHub: [github](https://github.com/elvis262/test_artefact.git)**
+
 ## Prerequis
 
 - Docker et Docker Compose
