@@ -247,6 +247,39 @@ C'est analogue au modele requete/reponse HTTP : un client envoie une requete a u
 
 Le DAG accepte un parametre `date` via `params`. La task `validate_execution_date` le recupere depuis `context['params']` avec fallback sur `context['ds_nodash']` (date d'execution Airflow au format YYYYMMDD). Cela permet de declencher le DAG manuellement avec une date arbitraire ou de laisser Airflow fournir la date courante lors d'une execution planifiee.
 
+## Modelisation en etoile
+
+Le fichier `docker/postgres/init.sql` definit 4 tables normalisees ainsi qu'une **vue `sales`** qui materialise une modelisation en etoile (star schema).
+
+### Schema en etoile
+
+La table de faits est `sale_product` (granularite : ligne de vente). Les dimensions gravitent autour :
+
+| Table | Role | Cle primaire |
+| --- | --- | --- |
+| `sale_product` | Faits (mesures : `quantity`, `discount_applied`) | `item_id` |
+| `client` | Dimension client (demographics, pays, date d'inscription) | `customer_id` |
+| `product` | Dimension produit (marque, categorie, prix catalogue) | `product_id` |
+| `sale` | Dimension vente (date, canal, campagne) | `sale_id` |
+
+### Vue `sales`
+
+La vue `sales` joint les 4 tables pour reconstituer une table de faits enrichie, directement exploitable pour l'analyse :
+
+```sql
+CREATE VIEW sales AS
+SELECT p.product_id, s.sale_id, c.customer_id, sp.item_id,
+       s.sale_date, quantity,
+       (quantity * catalog_price * (1 - discount_applied)) AS sales_amount,
+       channel, channel_campaigns, sp.discount_applied
+FROM sale_product sp
+JOIN sale s ON s.sale_id = sp.sale_id
+JOIN product p ON p.product_id = sp.product_id
+JOIN client c ON c.customer_id = s.customer_id;
+```
+
+Elle calcule notamment `sales_amount` (montant net de la ligne de vente) a partir du prix catalogue, de la quantite et de la remise appliquee : `quantity * catalog_price * (1 - discount_applied)`. Cette colonne evite de stocker un champ calcule dans les tables normalisees tout en le rendant disponible pour les requetes analytiques.
+
 ## Exploration des donnees
 
 L'analyse exploratoire est documentee dans `exploration.ipynb`. Elle aboutit a un schema normalise en 4 tables. Voir le notebook pour le detail des champs exclus (champs calcules et violations de formes normales).

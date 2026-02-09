@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS sale_product (
     sale_id INTEGER,
     product_id INTEGER,
     quantity INTEGER,
-    discount_applied DECIMAL(10, 2),
+    discount_applied DECIMAL(2, 2),
     CONSTRAINT fk_sale_product_sale FOREIGN KEY (sale_id) REFERENCES sale(sale_id),
     CONSTRAINT fk_sale_product_product FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
@@ -42,3 +42,12 @@ CREATE TABLE IF NOT EXISTS sale_product (
 CREATE INDEX IF NOT EXISTS idx_sale_customer_id ON sale(customer_id);
 CREATE INDEX IF NOT EXISTS idx_sale_product_sale_id ON sale_product(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sale_product_product_id ON sale_product(product_id);
+
+
+CREATE VIEW sales AS
+SELECT p.product_id, s.sale_id, c.customer_id, sp.item_id, s.sale_date, quantity, (quantity * catalog_price * (1 - discount_applied)) as sales_amount,
+channel, channel_campaigns, sp.discount_applied
+FROM sale_product sp
+JOIN sale s ON s.sale_id = sp.sale_id
+JOIN product p ON p.product_id = sp.product_id
+JOIN client c ON c.customer_id = s.customer_id;
